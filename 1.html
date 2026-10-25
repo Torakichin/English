@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>中1英語 4択トレーニング 完成版</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;
+    background:#f4f6f8; color:#222;
+  }
+  .app { max-width: 760px; margin: 0 auto; padding: 24px 16px 50px; }
+  header { text-align:center; margin-bottom:20px; }
+  h1 { margin: 0 0 6px; font-size: 28px; }
+  .sub { color:#667085; font-size:14px; }
+  .card {
+    background:white; border:1px solid #e3e7ec; border-radius:12px;
+    padding:22px; box-shadow:0 2px 8px rgba(0,0,0,.04);
+  }
+  .hidden { display:none; }
+  .section-title { font-size:20px; font-weight:700; margin:0 0 14px; }
+  label { display:block; font-weight:600; margin:14px 0 7px; }
+  select, button {
+    width:100%; min-height:48px; border-radius:8px; font-size:16px;
+  }
+  select { padding:0 12px; border:1px solid #cfd6df; background:white; }
+  button { border:0; cursor:pointer; font-weight:700; }
+  .primary { margin-top:20px; background:#2563eb; color:white; }
+  .primary:hover { background:#1d4ed8; }
+  .secondary { background:#eef2f6; color:#222; margin-top:10px; }
+  .topline { display:flex; justify-content:space-between; gap:10px; color:#667085; font-size:14px; margin-bottom:14px; }
+  .progress { height:8px; background:#e8edf3; border-radius:999px; overflow:hidden; margin-bottom:22px; }
+  .bar { height:100%; width:0; background:#2563eb; transition:.25s; }
+  .instruction { color:#667085; font-size:14px; margin-bottom:8px; }
+  .question { font-size:22px; line-height:1.55; font-weight:700; margin:8px 0 20px; white-space:pre-line; }
+  .choices { display:grid; gap:10px; }
+  .choice {
+    text-align:left; padding:13px 15px; background:white; border:2px solid #d9e0e8;
+    color:#222; min-height:52px;
+  }
+  .choice:hover:not(:disabled) { border-color:#2563eb; background:#f8fbff; }
+  .choice.correct { border-color:#16a34a; background:#ecfdf3; }
+  .choice.wrong { border-color:#dc2626; background:#fef2f2; }
+  .choice:disabled { cursor:default; }
+  .feedback { margin-top:18px; padding:14px; border-radius:8px; line-height:1.6; }
+  .ok { background:#ecfdf3; }
+  .ng { background:#fef2f2; }
+  .next { margin-top:14px; background:#222; color:white; }
+  .score-big { text-align:center; font-size:48px; font-weight:800; margin:15px 0 4px; }
+  .result-msg { text-align:center; color:#667085; margin-bottom:20px; }
+  .mistakes { margin-top:22px; }
+  .mistake { padding:12px 0; border-top:1px solid #e6e9ee; font-size:14px; line-height:1.55; }
+  .note { margin-top:16px; color:#667085; font-size:12px; line-height:1.6; }
+  @media(max-width:520px){ h1{font-size:23px}.card{padding:17px}.question{font-size:19px} }
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>中1英語 4択トレーニング</h1>
+  <div class="sub">13単元から選んで、4択問題に挑戦</div>
+</header>
+
+<section id="menu" class="card">
+  <h2 class="section-title">学習する単元</h2>
+  <label for="unit">単元</label>
+  <select id="unit">
+    <option value="be">be動詞</option>
+    <option value="general">一般動詞</option>
+    <option value="questions">疑問文・否定文</option>
+    <option value="wh">疑問詞</option>
+    <option value="imperative">命令文</option>
+    <option value="third">三人称単数現在</option>
+    <option value="progressive">現在進行形</option>
+    <option value="can">can</option>
+    <option value="past">一般動詞の過去</option>
+    <option value="plural">名詞の複数形</option>
+    <option value="pronoun">代名詞</option>
+    <option value="bepast">be動詞過去</option>
+    <option value="pastprog">過去進行形</option>
+  </select>
+  <label for="set">問題セット</label>
+  <select id="set"></select>
+  <button id="start" class="primary">スタート</button>
+  <div class="note">問題文は各単元の学習範囲・出題形式を参考にしたオリジナル問題です。すべて4択で回答できます。</div>
+</section>
+
+<section id="quiz" class="card hidden">
+  <div class="topline"><span id="setName"></span><span id="counter"></span></div>
+  <div class="progress"><div id="bar" class="bar"></div></div>
+  <div id="instruction" class="instruction"></div>
+  <div id="question" class="question"></div>
+  <div id="choices" class="choices"></div>
+  <div id="feedback" class="feedback hidden"></div>
+  <button id="next" class="next hidden">次の問題</button>
+</section>
+
+<section id="result" class="card hidden">
+  <h2 class="section-title">結果</h2>
+  <div id="score" class="score-big"></div>
+  <div id="resultMsg" class="result-msg"></div>
+  <div id="mistakes" class="mistakes"></div>
+  <button id="retry" class="primary">もう一度</button>
+  <button id="back" class="secondary">単元選択に戻る</button>
+</section>
+</div>
+
+<script>
+const DATA = {
+  be: {
+    title: "be動詞",
+    sets: [
+      {name:"肯定文1", questions:[
+        q("be動詞を選びなさい。","I ___ a junior high school student.",["am","is","are","be"],0,"主語が I のときは am。"),
+        q("be動詞を選びなさい。","You ___ my friend.",["am","is","are","be"],2,"主語が you のときは are。"),
+        q("正しい英文を選びなさい。","「私は13歳です。」",["I am thirteen years old.","I is thirteen years old.","I are thirteen years old.","Am I thirteen years old."],0,"I + am を使います。"),
+        q("正しい英文を選びなさい。","「彼は私の兄です。」",["He am my brother.","He are my brother.","He is my brother.","Is he my brother."],2,"he は三人称単数なので is。"),
+        q("正しい短縮形を選びなさい。","I am",["I'm","I's","I're","Iam"],0,"I am → I'm"),
+        q("正しい短縮形を選びなさい。","She is",["She's","She'm","She're","Shes"],0,"She is → She's"),
+        q("be動詞を選びなさい。","This ___ my notebook.",["am","are","is","be"],2,"this は単数なので is。"),
+        q("正しい英文を選びなさい。","「あなたは親切です。」",["You is kind.","You are kind.","You am kind.","Are you kind."],1,"you + are。")
+      ]},
+      {name:"肯定文2", questions:[
+        q("be動詞を選びなさい。","We ___ classmates.",["is","am","are","be"],2,"we は複数なので are。"),
+        q("be動詞を選びなさい。","They ___ from Canada.",["are","is","am","be"],0,"they + are。"),
+        q("be動詞を選びなさい。","Ken and Yuki ___ good friends.",["is","am","are","be"],2,"2人なので複数扱いで are。"),
+        q("正しい英文を選びなさい。","「これは新しい自転車です。」",["This are a new bike.","This is a new bike.","This am a new bike.","These is a new bike."],1,"this は単数なので is。"),
+        q("正しい英文を選びなさい。","「私たちは忙しいです。」",["We is busy.","We am busy.","We are busy.","Are we busy."],2,"we + are。"),
+        q("正しい短縮形を選びなさい。","They are",["They're","They's","They'm","Their"],0,"They are → They're"),
+        q("正しい短縮形を選びなさい。","We are",["We're","We's","We'm","Were"],0,"We are → We're"),
+        q("be動詞を選びなさい。","My parents ___ at home.",["is","are","am","be"],1,"parents は複数なので are。")
+      ]},
+      {name:"否定文1", questions:[
+        q("正しい否定文を選びなさい。","I am a teacher.",["I am not a teacher.","I not am a teacher.","I is not a teacher.","I do not a teacher."],0,"be動詞の直後に not。"),
+        q("正しい否定文を選びなさい。","He is busy.",["He not is busy.","He is not busy.","He does not busy.","He are not busy."],1,"is の直後に not。"),
+        q("正しい否定文を選びなさい。","You are late.",["You are not late.","You not are late.","You do not late.","You is not late."],0,"are + not。"),
+        q("正しい短縮形を選びなさい。","is not",["isn't","is'nt","isnt'","aren't"],0,"is not → isn't"),
+        q("正しい短縮形を選びなさい。","are not",["isn't","aren't","amn't","don't"],1,"are not → aren't"),
+        q("正しい英文を選びなさい。","「私は疲れていません。」",["I am tired.","I am not tired.","I do not tired.","I is not tired."],1,"am の後に not。"),
+        q("正しい英文を選びなさい。","「彼女は学生ではありません。」",["She isn't a student.","She don't a student.","She aren't a student.","She am not a student."],0,"She is not = She isn't。"),
+        q("正しい否定文を選びなさい。","This is my bag.",["This not is my bag.","This isn't my bag.","This don't my bag.","This aren't my bag."],1,"This is not → This isn't。")
+      ]},
+      {name:"否定文2", questions:[
+        q("正しい否定文を選びなさい。","We are hungry.",["We aren't hungry.","We isn't hungry.","We don't hungry.","We not are hungry."],0,"We are not = We aren't。"),
+        q("正しい否定文を選びなさい。","They are in the park.",["They isn't in the park.","They aren't in the park.","They don't in the park.","They not in the park."],1,"they + are not。"),
+        q("正しい英文を選びなさい。","「ケンと私は兄弟ではありません。」",["Ken and I am not brothers.","Ken and I isn't brothers.","Ken and I aren't brothers.","Ken and I doesn't brothers."],2,"Ken and I = we と考え、are not。"),
+        q("正しい英文を選びなさい。","「これらは私の本ではありません。」",["These isn't my books.","These aren't my books.","These am not my books.","These don't my books."],1,"these は複数なので are not。"),
+        q("正しい英文を選びなさい。","「私の犬は大きくありません。」",["My dog aren't big.","My dog isn't big.","My dog don't big.","My dog am not big."],1,"My dog は単数なので isn't。"),
+        q("正しい否定文を選びなさい。","Tom and Mike are students.",["Tom and Mike isn't students.","Tom and Mike aren't students.","Tom and Mike doesn't students.","Tom and Mike am not students."],1,"複数主語なので aren't。"),
+        q("正しい英文を選びなさい。","「私たちはアメリカ出身ではありません。」",["We aren't from America.","We isn't from America.","We don't from America.","We am not from America."],0,"we + are not。"),
+        q("正しい英文を選びなさい。","「あの車は新しくありません。」",["That car aren't new.","That car isn't new.","That car don't new.","That car am not new."],1,"That car は単数なので isn't。")
+      ]},
+      {name:"疑問文1", questions:[
+        q("正しい疑問文を選びなさい。","You are a student.",["Do you are a student?","Are you a student?","You are a student?","Is you a student?"],1,"be動詞を主語の前へ。"),
+        q("正しい疑問文を選びなさい。","He is busy.",["Is he busy?","Does he is busy?","He is busy?","Are he busy?"],0,"is を he の前へ。"),
+        q("正しい疑問文を選びなさい。","She is from Japan.",["Are she from Japan?","Does she from Japan?","Is she from Japan?","She is from Japan?"],2,"Is + she ...?"),
+        q("適切な答えを選びなさい。","Are you tired?",["Yes, I am.","Yes, I is.","Yes, you are.","Yes, I do."],0,"Are you ...? への肯定の答えは Yes, I am."),
+        q("適切な答えを選びなさい。","Is he your brother?",["Yes, he does.","Yes, he is.","Yes, he are.","Yes, I am."],1,"Is he ...? → Yes, he is."),
+        q("適切な答えを選びなさい。","Is this your pen?",["No, it isn't.","No, this don't.","No, it aren't.","No, I am not."],0,"this を受ける代名詞は it。"),
+        q("正しい英文を選びなさい。","「あなたは元気ですか。」",["Do you fine?","Are you fine?","Is you fine?","You are fine?"],1,"Are you ...?"),
+        q("正しい英文を選びなさい。","「彼女は先生ですか。」",["Does she a teacher?","Are she a teacher?","Is she a teacher?","She is a teacher?"],2,"Is she ...?")
+      ]},
+      {name:"疑問文2", questions:[
+        q("正しい疑問文を選びなさい。","They are at school.",["Are they at school?","Is they at school?","Do they are at school?","They are at school?"],0,"are を they の前へ。"),
+        q("正しい疑問文を選びなさい。","Ken and Emi are friends.",["Is Ken and Emi friends?","Are Ken and Emi friends?","Do Ken and Emi are friends?","Ken and Emi are friends?"],1,"複数主語なので Are。"),
+        q("適切な答えを選びなさい。","Are they your classmates?",["No, they aren't.","No, they isn't.","No, they don't.","No, we aren't."],0,"Are they ...? → No, they aren't."),
+        q("適切な答えを選びなさい。","Are we early?",["Yes, we are.","Yes, we is.","Yes, we do.","Yes, you am."],0,"Are we ...? → Yes, we are."),
+        q("正しい英文を選びなさい。","「これらはあなたの写真ですか。」",["Is these your pictures?","Are these your pictures?","Do these your pictures?","These are your pictures?"],1,"these は複数なので Are。"),
+        q("正しい英文を選びなさい。","「あなたのお父さんは家にいますか。」",["Are your father at home?","Does your father at home?","Is your father at home?","Your father is at home?"],2,"your father は単数なので Is。"),
+        q("正しい疑問文を選びなさい。","The books are new.",["Is the books new?","Are the books new?","Do the books are new?","The books are new?"],1,"books は複数なので Are。"),
+        q("適切な答えを選びなさい。","Is your mother a doctor?",["No, she isn't.","No, she aren't.","No, she doesn't.","No, he isn't."],0,"mother を受ける代名詞は she。")
+      ]},
+      {name:"be動詞の文1", questions:[
+        q("正しい英文を選びなさい。","「私はサッカー部の一員です。」",["I am a member of the soccer club.","I is a member of the soccer club.","I are a member of the soccer club.","I do a member of the soccer club."],0,"I + am。"),
+        q("正しい英文を選びなさい。","「彼は今、図書館にいます。」",["He are in the library now.","He is in the library now.","He am in the library now.","He does in the library now."],1,"he + is。"),
+        q("正しい否定文を選びなさい。","My sister is at home.",["My sister isn't at home.","My sister don't at home.","My sister aren't at home.","My sister not at home."],0,"単数主語 + isn't。"),
+        q("正しい疑問文を選びなさい。","Your books are on the desk.",["Is your books on the desk?","Are your books on the desk?","Do your books on the desk?","Your books are on the desk?"],1,"books は複数。"),
+        q("適切な答えを選びなさい。","Are you from Ehime?",["Yes, I am.","Yes, I is.","Yes, you are.","Yes, I do."],0,"Are you ...? → Yes, I am."),
+        q("be動詞を選びなさい。","My name ___ Yuta.",["are","am","is","be"],2,"My name は単数。"),
+        q("正しい英文を選びなさい。","「彼らはとても親切です。」",["They is very kind.","They are very kind.","They am very kind.","They be very kind."],1,"they + are。"),
+        q("正しい英文を選びなさい。","「これは私のものではありません。」",["This aren't mine.","This isn't mine.","This don't mine.","This am not mine."],1,"this + is not。")
+      ]},
+      {name:"be動詞の文2", questions:[
+        q("正しい英文を選びなさい。","「私たちの学校は駅の近くです。」",["Our school are near the station.","Our school is near the station.","Our school am near the station.","Our school be near the station."],1,"Our school は単数。"),
+        q("正しい疑問文を選びなさい。","Your parents are busy.",["Is your parents busy?","Are your parents busy?","Do your parents are busy?","Your parents busy?"],1,"parents は複数。"),
+        q("正しい英文を選びなさい。","「あの少年たちは私の友達です。」",["Those boys is my friends.","Those boys are my friends.","Those boys am my friends.","That boys are my friends."],1,"Those boys は複数。"),
+        q("正しい否定文を選びなさい。","These flowers are beautiful.",["These flowers isn't beautiful.","These flowers aren't beautiful.","These flowers don't beautiful.","These flowers am not beautiful."],1,"複数主語 + aren't。"),
+        q("適切な答えを選びなさい。","Is Mr. Brown your English teacher?",["Yes, he is.","Yes, he are.","Yes, he does.","Yes, it is."],0,"男性一人を he で受けます。"),
+        q("be動詞を選びなさい。","The cat and the dog ___ under the table.",["is","am","are","be"],2,"2つの主語なので複数。"),
+        q("正しい英文を選びなさい。","「私は今、暇ではありません。」",["I isn't free now.","I am not free now.","I don't free now.","I aren't free now."],1,"I am not。"),
+        q("正しい疑問文を選びなさい。","That is your umbrella.",["Are that your umbrella?","Is that your umbrella?","Does that your umbrella?","That is your umbrella?"],1,"that は単数なので Is。")
+      ]},
+      {name:"be動詞3（1年全範囲）", questions:[
+        q("最も適切な英文を選びなさい。","「あなたとケンは同じクラスですか。」",["Is you and Ken in the same class?","Are you and Ken in the same class?","Do you and Ken in the same class?","Am you and Ken in the same class?"],1,"you and Ken は複数扱い。"),
+        q("最も適切な英文を選びなさい。","「はい、そうです。」\nAre these your shoes?",["Yes, these are.","Yes, they are.","Yes, it is.","Yes, they do."],1,"these shoes は they で受けます。"),
+        q("最も適切な英文を選びなさい。","「彼女の名前はメアリーではありません。」",["Her name aren't Mary.","Her name isn't Mary.","Her name don't Mary.","Her name am not Mary."],1,"Her name は単数。"),
+        q("正しい組み合わせを選びなさい。","I ___ happy, but my brothers ___ tired.",["am / are","is / are","am / is","are / are"],0,"I → am、brothers → are。"),
+        q("正しい英文を選びなさい。","「その犬は公園にいますか。」",["Are the dog in the park?","Is the dog in the park?","Does the dog in the park?","The dog is in the park?"],1,"the dog は単数。"),
+        q("正しい英文を選びなさい。","「私たちは東京出身ではありません。」",["We isn't from Tokyo.","We aren't from Tokyo.","We doesn't from Tokyo.","We am not from Tokyo."],1,"we + aren't。"),
+        q("適切な答えを選びなさい。","Is Emi at home?",["No, she isn't.","No, Emi aren't.","No, she doesn't.","No, it isn't."],0,"Emi は she で受けます。"),
+        q("正しい英文を選びなさい。","「あれらの箱は重いです。」",["Those boxes is heavy.","Those boxes are heavy.","That boxes are heavy.","Those box are heavy."],1,"Those boxes は複数。"),
+        q("be動詞を選びなさい。","There ___ two books on the desk.",["is","am","are","be"],2,"後ろが two books なので are。"),
+        q("正しい英文を選びなさい。","「今日は月曜日です。」",["Today are Monday.","Today is Monday.","Today am Monday.","Today be Monday."],1,"Today + is。")
+      ]},
+      {name:"be動詞4（1年全範囲）", questions:[
+        q("正しい組み合わせを選びなさい。","This ___ my bag, and those ___ my shoes.",["is / are","are / is","is / is","are / are"],0,"this → is、those → are。"),
+        q("正しい疑問文を選びなさい。","Your sister is thirteen.",["Does your sister thirteen?","Are your sister thirteen?","Is your sister thirteen?","Your sister is thirteen?"],2,"is を主語の前へ。"),
+        q("適切な答えを選びなさい。","Are Tom and Ken brothers?",["Yes, he is.","Yes, they are.","Yes, Tom is.","Yes, they do."],1,"Tom and Ken は they で受けます。"),
+        q("正しい英文を選びなさい。","「その本は私のではありません。」",["The book aren't mine.","The book isn't mine.","The book don't mine.","The book not mine."],1,"The book は単数。"),
+        q("正しい英文を選びなさい。","「あなたたちは忙しいですか。」",["Is you busy?","Are you busy?","Do you are busy?","Am you busy?"],1,"you は単数でも複数でも are。"),
+        q("be動詞を選びなさい。","There ___ a park near my house.",["are","am","is","be"],2,"a park は単数なので is。"),
+        q("正しい英文を選びなさい。","「私の両親は今家にいません。」",["My parents isn't at home now.","My parents aren't at home now.","My parents doesn't at home now.","My parents am not at home now."],1,"parents は複数。"),
+        q("正しい英文を選びなさい。","「これはあなたの自転車ですか。」",["Are this your bike?","Is this your bike?","Do this your bike?","This is your bike?"],1,"Is this ...?"),
+        q("適切な答えを選びなさい。","Is this your dictionary?",["No, it isn't.","No, this aren't.","No, it doesn't.","No, I am not."],0,"this を it で受けます。"),
+        q("正しい英文を選びなさい。","「私たちは同じ中学校の生徒です。」",["We is students at the same junior high school.","We are students at the same junior high school.","We am students at the same junior high school.","We be students at the same junior high school."],1,"we + are。")
+      ]}
+    ]
+  },
+  general: {
+    title: "一般動詞",
+    sets: [
+      {name:"肯定文1", questions:[
+        q("意味を選びなさい。","study",["勉強する","住んでいる","話す","知っている"],0,"study は「勉強する」。"),
+        q("意味を選びなさい。","have",["歩く","持っている・食べる","来る","聞く"],1,"have は「持っている」「食べる」などの意味があります。"),
+        q("正しい英文を選びなさい。","「私は音楽が好きです。」",["I am like music.","I like music.","I likes music.","I liking music."],1,"I の後は一般動詞 like をそのまま使います。"),
+        q("正しい英文を選びなさい。","「あなたは英語を話します。」",["You speak English.","You are speak English.","You speaks English.","You speaking English."],0,"you の後は動詞の原形 speak。"),
+        q("正しい英文を選びなさい。","「私は大阪に住んでいます。」",["I am live in Osaka.","I lives in Osaka.","I live in Osaka.","I living in Osaka."],2,"I + live。"),
+        q("正しい語順を選びなさい。","「私は毎日テレビを見ます。」",["I every day watch TV.","I watch TV every day.","Watch I TV every day.","I TV watch every day."],1,"主語 + 動詞 + 目的語 + every day の語順。"),
+        q("正しい英文を選びなさい。","「私はサッカーをします。」",["I play soccer.","I am soccer.","I plays soccer.","I do soccer play."],0,"スポーツを「する」は play。"),
+        q("正しい英文を選びなさい。","「私はそのことについて知っています。」",["I know about it.","I am know about it.","I knows about it.","I knowing it."],0,"know about ... で「…について知っている」。")
+      ]},
+      {name:"肯定文2", questions:[
+        q("正しい英文を選びなさい。","「私たちは昼食を12時に食べます。」",["We eat lunch at twelve.","We are eat lunch at twelve.","We eats lunch at twelve.","We eating lunch at twelve."],0,"we の後は eat。"),
+        q("正しい英文を選びなさい。","「彼らは上手に英語を話します。」",["They speaks English well.","They are speak English well.","They speak English well.","They speaking English well."],2,"they の後は speak。"),
+        q("正しい英文を選びなさい。","「私は図書館で本を読みます。」",["I read a book in the library.","I am read a book in the library.","I reads a book in the library.","I a book read in the library."],0,"I read a book ... が正しい語順。"),
+        q("正しい英文を選びなさい。","「彼らはバスで学校へ来ます。」",["They come school by to bus.","They are come to school by bus.","They come to school by bus.","They comes to school by bus."],2,"come to school / by bus の形。"),
+        q("正しい語順を選びなさい。","「私はいつも早く起きます。」",["I get always up early.","I always get up early.","Always I up get early.","I get up always early."],1,"頻度を表す always は一般動詞の前が基本。"),
+        q("正しい英文を選びなさい。","「私たちは放課後テニスを練習します。」",["We practice tennis after school.","We are practice tennis after school.","We practices tennis after school.","We tennis practice after school."],0,"practice tennis で「テニスを練習する」。"),
+        q("正しい英文を選びなさい。","「私は面白い本を1冊持っています。」",["I have an interesting book.","I am an interesting book.","I has an interesting book.","I having an interesting book."],0,"I + have。"),
+        q("正しい英文を選びなさい。","「彼らはそこで写真を撮ります。」",["They take pictures there.","They takes pictures there.","They are take pictures there.","They pictures take there."],0,"take pictures で「写真を撮る」。")
+      ]},
+      {name:"疑問文・否定文1", questions:[
+        q("正しい疑問文を選びなさい。","You like tennis.",["Are you like tennis?","Do you like tennis?","Do you likes tennis?","You do like tennis?"],1,"一般動詞の疑問文は Do + 主語 + 動詞の原形 ...?"),
+        q("正しい疑問文を選びなさい。","They watch TV after dinner.",["Do they watch TV after dinner?","Are they watch TV after dinner?","Do they watches TV after dinner?","They do watch TV after dinner?"],0,"Do they + watch ...?"),
+        q("正しい否定文を選びなさい。","We play computer games.",["We aren't play computer games.","We don't play computer games.","We don't plays computer games.","We not play computer games."],1,"一般動詞の否定文は don't + 動詞の原形。"),
+        q("正しい否定文を選びなさい。","I work alone.",["I am not work alone.","I don't work alone.","I don't works alone.","I not work alone."],1,"I don't work ..."),
+        q("正しい疑問文を選びなさい。","You make lunch.",["Do you make lunch?","Are you make lunch?","Do you makes lunch?","Does you make lunch?"],0,"you なので Do。"),
+        q("正しい否定文を選びなさい。","You have a brother.",["You aren't have a brother.","You don't have a brother.","You doesn't have a brother.","You don't has a brother."],1,"don't の後は have の原形。"),
+        q("適切な答えを選びなさい。","Do you swim in the sea?",["Yes, I am.","Yes, I do.","Yes, I swim do.","Yes, you do."],1,"Do you ...? → Yes, I do."),
+        q("適切な答えを選びなさい。","Do they play tennis?",["No, they aren't.","No, they doesn't.","No, they don't.","No, they not."],2,"Do they ...? → No, they don't.")
+      ]},
+      {name:"疑問文・否定文2", questions:[
+        q("正しい英文を選びなさい。","「あなたは毎日教室を掃除しますか。」",["Are you clean your classroom every day?","Do you clean your classroom every day?","Do you cleans your classroom every day?","You do clean your classroom every day?"],1,"Do you + clean ...?"),
+        q("正しい英文を選びなさい。","「私たちはバスで学校へ来ません。」",["We aren't come to school by bus.","We don't come to school by bus.","We doesn't come to school by bus.","We don't comes to school by bus."],1,"we + don't + come。"),
+        q("正しい英文を選びなさい。","「彼らは早く寝ません。」",["They don't go to bed early.","They aren't go to bed early.","They doesn't go to bed early.","They don't goes to bed early."],0,"go to bed で「寝る」。"),
+        q("正しい英文を選びなさい。","「あなたは10時にお風呂に入りますか。」",["Do you take a bath at ten?","Are you take a bath at ten?","Do you takes a bath at ten?","Does you take a bath at ten?"],0,"take a bath で「入浴する」。"),
+        q("正しい語順を選びなさい。","「あなたはよく音楽を聞きますか。」",["Do often you listen to music?","Do you often listen to music?","You do listen often to music?","Do you listen often music to?"],1,"Do you + often + 動詞 ...?"),
+        q("正しい英文を選びなさい。","「彼らはふだん図書館を訪れません。」",["They usually don't visits the library.","They don't usually visit the library.","They aren't usually visit the library.","They doesn't usually visit the library."],1,"don't の後は visit の原形。"),
+        q("適切な答えを選びなさい。","Do you open the window?",["No, I don't.","No, I am not.","No, I doesn't.","No, you don't."],0,"Do you ...? → No, I don't."),
+        q("適切な答えを選びなさい。","Do they take a walk in the morning?",["Yes, they are.","Yes, they do.","Yes, they does.","Yes, they take."],1,"Do they ...? → Yes, they do.")
+      ]},
+      {name:"一般動詞の文1", questions:[
+        q("意味を選びなさい。","play",["勉強する","演奏する・スポーツをする","歩く","知っている"],1,"play は楽器の演奏やスポーツに使います。"),
+        q("意味を選びなさい。","want",["欲しい","住んでいる","来る","話す"],0,"want は「欲しい」。"),
+        q("正しい英文を選びなさい。","「私はギターを弾きます。」",["I play the guitar.","I am play the guitar.","I play guitar the.","I plays the guitar."],0,"楽器には通常 the を付けて play the guitar。"),
+        q("正しい英文を選びなさい。","「私たちは毎日英語を勉強します。」",["We study English every day.","We are study English every day.","We studies English every day.","We English study every day."],0,"we + study。"),
+        q("正しい疑問文を選びなさい。","You know Mr. White.",["Are you know Mr. White?","Do you know Mr. White?","Do you knows Mr. White?","Does you know Mr. White?"],1,"Do you know ...?"),
+        q("正しい否定文を選びなさい。","I come to school by bike.",["I don't come to school by bike.","I am not come to school by bike.","I don't comes to school by bike.","I doesn't come to school by bike."],0,"I don't + come。"),
+        q("正しい英文を選びなさい。","「あなたは新しいかばんが欲しいですか。」",["Are you want a new bag?","Do you want a new bag?","Do you wants a new bag?","Does you want a new bag?"],1,"Do you want ...?"),
+        q("正しい英文を選びなさい。","「私は日本語を話しません。」",["I am not speak Japanese.","I don't speak Japanese.","I doesn't speak Japanese.","I don't speaks Japanese."],1,"I don't speak ...")
+      ]},
+      {name:"一般動詞の文2（三単現を含む）", questions:[
+        q("正しい動詞を選びなさい。","Satoko ___ a walk every morning.",["take","takes","taking","is take"],1,"Satoko は三人称単数なので takes。"),
+        q("正しい英文を選びなさい。","「私の姉はよく図書館を訪れます。」",["My sister often visit the library.","My sister often visits the library.","My sister often visiting the library.","My sister is visit the library."],1,"三人称単数現在なので visits。"),
+        q("正しい疑問文を選びなさい。","Your father works at home.",["Do your father work at home?","Does your father work at home?","Does your father works at home?","Is your father work at home?"],1,"三単現の疑問文は Does + 主語 + 動詞の原形。"),
+        q("適切な答えを選びなさい。","Does Ken play soccer?",["No, he don't.","No, he doesn't.","No, he isn't.","No, he does not plays."],1,"Does ...? → No, he doesn't."),
+        q("正しい否定文を選びなさい。","Ken washes his bike.",["Ken don't wash his bike.","Ken doesn't washes his bike.","Ken doesn't wash his bike.","Ken isn't wash his bike."],2,"doesn't の後は動詞の原形 wash。"),
+        q("正しい英文を選びなさい。","「ユミはときどき祖母の家に滞在します。」",["Yumi sometimes stay at her grandmother's house.","Yumi sometimes stays at her grandmother's house.","Yumi sometimes staying at her grandmother's house.","Yumi does stays at her grandmother's house."],1,"Yumi は三人称単数なので stays。"),
+        q("正しい動詞を選びなさい。","Mike ___ English every day.",["study","studys","studies","studying"],2,"子音字 + y の study は y を i に変えて studies。"),
+        q("正しい動詞を選びなさい。","My brother ___ TV after dinner.",["watch","watchs","watches","watchies"],2,"watch → watches。"),
+        q("正しい疑問文を選びなさい。","Emi does her homework after dinner.",["Do Emi do her homework after dinner?","Does Emi do her homework after dinner?","Does Emi does her homework after dinner?","Is Emi do her homework after dinner?"],1,"Does の後は do の原形。"),
+        q("正しい否定文を選びなさい。","He practices tennis in the afternoon.",["He doesn't practice tennis in the afternoon.","He doesn't practices tennis in the afternoon.","He don't practice tennis in the afternoon.","He isn't practice tennis in the afternoon."],0,"doesn't + practice。")
+      ]}
+    ]
+  },
+
+  // ============================================================
+  // 疑問文・否定文
+  // ============================================================
+  questions: {
+    title: "疑問文・否定文",
+    sets: [
+      {name:"疑問・否定0（基本）", questions:[
+        q("正しい疑問文を選びなさい。","You are a student.",["Are you a student?","Do you a student?","Is you a student?","You are a student?"],0,"be動詞の文では、be動詞を主語の前に出します。"),
+        q("正しい疑問文を選びなさい。","You play tennis.",["Are you play tennis?","Do you play tennis?","Do you plays tennis?","Is you play tennis?"],1,"一般動詞の文では Do + 主語 + 動詞の原形。"),
+        q("正しい否定文を選びなさい。","I am from Japan.",["I don't from Japan.","I am not from Japan.","I not am from Japan.","I doesn't from Japan."],1,"be動詞の直後に not を置きます。"),
+        q("正しい否定文を選びなさい。","I like music.",["I am not like music.","I don't like music.","I don't likes music.","I not like music."],1,"一般動詞の否定文は don't + 動詞の原形。"),
+        q("正しい疑問文を選びなさい。","Ms. Brown is our teacher.",["Does Ms. Brown our teacher?","Are Ms. Brown our teacher?","Is Ms. Brown our teacher?","Do Ms. Brown our teacher?"],2,"is を主語の前に出します。"),
+        q("正しい否定文を選びなさい。","That is my notebook.",["That doesn't my notebook.","That isn't my notebook.","That don't my notebook.","That aren't my notebook."],1,"That is not = That isn't。"),
+        q("正しい疑問文を選びなさい。","You want a new bike.",["Are you want a new bike?","Do you want a new bike?","Is you want a new bike?","Do you wants a new bike?"],1,"want は一般動詞なので Do を使います。"),
+        q("正しい否定文を選びなさい。","We speak English.",["We aren't speak English.","We don't speak English.","We doesn't speak English.","We don't speaks English."],1,"we + don't + speak。")
+      ]},
+      {name:"疑問・否定1（見分け）", questions:[
+        q("正しい疑問文を選びなさい。","They are busy.",["Do they busy?","Are they busy?","Is they busy?","Do they are busy?"],1,"are があるので be動詞の疑問文です。"),
+        q("正しい疑問文を選びなさい。","They study English.",["Are they study English?","Do they study English?","Is they study English?","Do they studies English?"],1,"study は一般動詞なので Do。"),
+        q("正しい否定文を選びなさい。","You are my friend.",["You don't my friend.","You aren't my friend.","You doesn't my friend.","You not my friend."],1,"are not = aren't。"),
+        q("正しい否定文を選びなさい。","You walk to school.",["You aren't walk to school.","You don't walk to school.","You doesn't walk to school.","You don't walks to school."],1,"一般動詞 walk の前に don't。"),
+        q("適切な答えを選びなさい。","Are you hungry?",["Yes, I do.","Yes, I am.","Yes, you are.","Yes, I is."],1,"Are you ...? → Yes, I am."),
+        q("適切な答えを選びなさい。","Do you know Ken?",["Yes, I am.","Yes, I do.","Yes, I know do.","Yes, you do."],1,"Do you ...? → Yes, I do."),
+        q("適切な答えを選びなさい。","Is Yuki your sister?",["No, she isn't.","No, she doesn't.","No, Yuki aren't.","No, it isn't."],0,"Yuki は she で受け、be動詞で答えます。"),
+        q("適切な答えを選びなさい。","Do the students like music?",["No, they aren't.","No, they don't.","No, they doesn't.","No, it doesn't."],1,"Do ...? には do / don't で答えます。")
+      ]},
+      {name:"疑問・否定2（英作文）", questions:[
+        q("正しい英文を選びなさい。","「あなたは東京出身ですか。」",["Do you from Tokyo?","Are you from Tokyo?","Is you from Tokyo?","Are from Tokyo you?"],1,"出身を表す be from を使います。"),
+        q("正しい英文を選びなさい。","「あなたは毎日英語を勉強しますか。」",["Are you study English every day?","Do you study English every day?","Do you studies English every day?","Is you study English every day?"],1,"study は一般動詞なので Do。"),
+        q("正しい英文を選びなさい。","「私は先生ではありません。」",["I don't a teacher.","I am not a teacher.","I doesn't a teacher.","I not teacher."],1,"I am not ..."),
+        q("正しい英文を選びなさい。","「私は学校へ歩いて行きません。」",["I am not walk to school.","I don't walk to school.","I doesn't walk to school.","I don't walks to school."],1,"don't + walk。"),
+        q("正しい英文を選びなさい。","「あれはあなたの学校ですか。」",["Do that your school?","Is that your school?","Are that your school?","Does that your school?"],1,"that は単数なので Is that ...?"),
+        q("正しい英文を選びなさい。","「あなたはピアノを弾きますか。」",["Are you play the piano?","Do you play the piano?","Do you plays the piano?","Is you play the piano?"],1,"一般動詞 play なので Do。"),
+        q("正しい英文を選びなさい。","「ケンはアメリカ出身ではありません。」",["Ken doesn't from America.","Ken isn't from America.","Ken don't from America.","Ken aren't from America."],1,"Ken is not from ..."),
+        q("正しい英文を選びなさい。","「私は新しい自転車が欲しくありません。」",["I am not want a new bike.","I don't want a new bike.","I doesn't want a new bike.","I don't wants a new bike."],1,"want は一般動詞なので don't want。")
+      ]},
+      {name:"疑問・否定3（総合）", questions:[
+        q("正しい組み合わせを選びなさい。","___ you a student? / ___ you play soccer?",["Are / Do","Do / Are","Is / Do","Are / Are"],0,"be動詞の文は Are、一般動詞の文は Do。"),
+        q("正しい組み合わせを選びなさい。","I ___ busy. / I ___ watch TV.",["am not / don't","don't / am not","isn't / don't","am not / doesn't"],0,"busy は be動詞、watch は一般動詞。"),
+        q("適切な答えを選びなさい。","Is that your bag?",["Yes, it is.","Yes, it does.","Yes, that do.","Yes, I am."],0,"that は答えでは it で受けます。"),
+        q("適切な答えを選びなさい。","Do you speak Japanese?",["No, I am not.","No, I don't.","No, I isn't.","No, you don't."],1,"Do you ...? → No, I don't."),
+        q("誤りのない英文を選びなさい。","",["Do you are busy?","Are you busy?","Are you play tennis?","Do you from Japan?"],1,"busy は形容詞なので be動詞を使います。"),
+        q("誤りのない英文を選びなさい。","",["I don't am tired.","I am not tired.","I not am tired.","I doesn't tired."],1,"be動詞の否定は am not。"),
+        q("誤りのない英文を選びなさい。","",["We don't like math.","We aren't like math.","We don't likes math.","We not like math."],0,"一般動詞 like の否定は don't like。"),
+        q("正しい英文を選びなさい。","「彼らはあなたの友達ですか。」",["Do they your friends?","Are they your friends?","Is they your friends?","Do they are your friends?"],1,"friends という名詞を説明する文なので be動詞 are。")
+      ]}
+    ]
+  },
+
+  // ============================================================
+  // 疑問詞
+  // ============================================================
+  wh: {
+    title: "疑問詞",
+    sets: [
+      {name:"whatの文", questions:[
+        q("正しい英文を選びなさい。","「これは何ですか。」",["What this is?","What is this?","Is what this?","What does this?"],1,"疑問詞 What を文頭に置き、その後は疑問文の語順。"),
+        q("正しい英文を選びなさい。","「あなたは何が好きですか。」",["What do you like?","What are you like?","Do you like what?","What you do like?"],0,"What + do you + 動詞 ...?"),
+        q("正しい英文を選びなさい。","「あなたは朝食に何を食べますか。」",["What do you have for breakfast?","What are you have for breakfast?","Do you what have for breakfast?","What you have do for breakfast?"],0,"What do you have ...?"),
+        q("適切な答えを選びなさい。","What is that?",["Yes, it is.","It is a camera.","No, it isn't.","I am a student."],1,"疑問詞の疑問文には Yes / No ではなく内容で答えます。"),
+        q("適切な疑問詞を選びなさい。","___ do you study after dinner? — English.",["What","Where","Who","Why"],0,"「何を」なので What。"),
+        q("正しい英文を選びなさい。","「あなたは放課後何をしますか。」",["What do you do after school?","What are you do after school?","What you do after school?","Do what you after school?"],0,"What do you do ...?"),
+        q("正しい英文を選びなさい。","「あなたの名前は何ですか。」",["What your name is?","What is your name?","What does your name?","Is what your name?"],1,"What is your name?"),
+        q("適切な答えを選びなさい。","What do you want?",["I want a new pen.","Yes, I do.","No, I don't.","I am thirteen."],0,"what で尋ねられた内容を答えます。")
+      ]},
+      {name:"疑問詞の疑問文", questions:[
+        q("適切な疑問詞を選びなさい。","___ is your English teacher? — Ms. White.",["Who","Where","When","How"],0,"人を尋ねるので Who。"),
+        q("適切な疑問詞を選びなさい。","___ is your bag? — On the desk.",["What","Where","Who","Why"],1,"場所を尋ねるので Where。"),
+        q("適切な疑問詞を選びなさい。","___ do you get up? — At six.",["When","Who","Where","Whose"],0,"時を尋ねるので When。"),
+        q("適切な疑問詞を選びなさい。","___ are you? — I'm fine.",["What","How","Where","Which"],1,"状態を尋ねる How are you?"),
+        q("正しい英文を選びなさい。","「あなたはどこに住んでいますか。」",["Where are you live?","Where do you live?","Do you live where?","Where you do live?"],1,"Where + do you + live?"),
+        q("正しい英文を選びなさい。","「あの少年はだれですか。」",["Who is that boy?","Who that boy is?","Is who that boy?","Who does that boy?"],0,"Who is that boy?"),
+        q("正しい英文を選びなさい。","「あなたはいつテニスをしますか。」",["When are you play tennis?","When do you play tennis?","Do you when play tennis?","When you play do tennis?"],1,"When + do you + play ...?"),
+        q("適切な答えを選びなさい。","Where is Ken?",["He is in the library.","Yes, he is.","No, he isn't.","He likes books."],0,"where は場所を尋ねます。")
+      ]},
+      {name:"下線部をたずねる", questions:[
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","I play tennis AFTER SCHOOL.",["What do you play?","When do you play tennis?","Who plays tennis?","Where is tennis?"],1,"after school は時を表すので When。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","I play TENNIS after school.",["What do you play after school?","When do you play tennis?","Who plays tennis?","Where do you play?"],0,"tennis という内容を尋ねるので What。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","KEN is in the classroom.",["Where is Ken?","Who is in the classroom?","What does Ken do?","When is Ken?"],1,"主語 Ken を尋ねるので Who。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","Yuki is IN THE PARK.",["Who is in the park?","Where is Yuki?","What is Yuki?","When is Yuki?"],1,"場所を尋ねるので Where。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","I go to school BY BIKE.",["Where do you go?","How do you go to school?","When do you go to school?","What do you go?"],1,"方法・手段を尋ねるので How。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","THIS is my notebook.",["What is your notebook?","Which is your notebook?","Who is your notebook?","When is your notebook?"],1,"複数候補から「どれ」を尋ねる場合は Which。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","This is TOM'S bag.",["Who is this bag?","Whose bag is this?","What bag is Tom?","Which Tom is this?"],1,"所有者を尋ねるので Whose。"),
+        q("太字部分を尋ねる疑問文として適切なものを選びなさい。","I am THIRTEEN YEARS OLD.",["How are you?","How old are you?","What old are you?","When are you old?"],1,"年齢は How old ...? で尋ねます。")
+      ]},
+      {name:"疑問詞の疑問文2", questions:[
+        q("正しい英文を選びなさい。","「どちらの本があなたのものですか。」",["What book is yours?","Which book is yours?","Whose is book yours?","Where book is yours?"],1,"選択肢の中から「どちら」を尋ねるので Which。"),
+        q("正しい英文を選びなさい。","「これはだれの自転車ですか。」",["Who bike is this?","Whose bike is this?","Which bike this is?","What is whose bike?"],1,"Whose + 名詞 ...?"),
+        q("正しい英文を選びなさい。","「あなたは何冊の本を持っていますか。」",["How much books do you have?","How many books do you have?","What many books do you have?","How books many do you have?"],1,"数えられる名詞の数は How many + 複数形。"),
+        q("正しい英文を選びなさい。","「あなたは何歳ですか。」",["How are you old?","How old are you?","What old are you?","How do you old?"],1,"How old are you?"),
+        q("正しい英文を選びなさい。","「あなたはどうやって学校へ行きますか。」",["What do you go to school?","How do you go to school?","Where do you go school how?","How are you go to school?"],1,"方法を尋ねる How。"),
+        q("適切な答えを選びなさい。","How many brothers do you have?",["I have two.","Yes, I do.","I am two.","They are brothers."],0,"数を具体的に答えます。"),
+        q("適切な答えを選びなさい。","Whose pen is this?",["It is Ken's.","It is Ken.","Yes, it is.","It is on the desk."],0,"whose は所有者を尋ねます。"),
+        q("適切な答えを選びなさい。","Which is your bike?",["The red one is.","It is by bike.","Yes, it is.","I like bikes."],0,"which は選択肢の中から特定して答えます。")
+      ]},
+      {name:"why", questions:[
+        q("適切な疑問詞を選びなさい。","___ do you like English? — Because it is interesting.",["What","Why","Where","When"],1,"理由を尋ねるので Why。"),
+        q("正しい英文を選びなさい。","「なぜあなたは早く起きるのですか。」",["Why do you get up early?","Why are you get up early?","Do you why get up early?","Why you do get up early?"],0,"Why + do you + 動詞 ...?"),
+        q("適切な答えを選びなさい。","Why do you study English?",["Because I like English.","At seven.","In my room.","Yes, I do."],0,"Why ...? には Because ... で理由を答えられます。"),
+        q("正しい英文を選びなさい。","「なぜ彼らは忙しいのですか。」",["Why do they busy?","Why are they busy?","Why is they busy?","Are why they busy?"],1,"busy は形容詞なので be動詞 are。"),
+        q("適切な答えを選びなさい。","Why are you happy?",["Because today is my birthday.","At school.","I am thirteen.","Yes, I am."],0,"理由を答えます。"),
+        q("正しい英文を選びなさい。","「なぜあなたはその本が欲しいのですか。」",["Why are you want the book?","Why do you want the book?","Why you want do the book?","Do why you want the book?"],1,"want は一般動詞なので Why do you ...?"),
+        q("正しい語順を選びなさい。","why / you / do / soccer / like",["Why you do like soccer?","Why do you like soccer?","Do you why like soccer?","Why like you do soccer?"],1,"疑問詞 + Do + 主語 + 動詞。"),
+        q("適切な答えを選びなさい。","Why do you go to the library?",["Because I want to read books.","By bus.","After school.","Yes, I do."],0,"Why には理由を答えます。")
+      ]},
+      {name:"why2（総合）", questions:[
+        q("適切な疑問詞を選びなさい。","___ do you practice tennis? — In the park.",["Why","Where","When","Who"],1,"場所なので Where。"),
+        q("適切な疑問詞を選びなさい。","___ do you practice tennis? — On Sunday.",["When","Where","Who","Whose"],0,"時なので When。"),
+        q("適切な疑問詞を選びなさい。","___ do you practice tennis? — Because I like it.",["How","Why","What","Which"],1,"理由なので Why。"),
+        q("適切な疑問詞を選びなさい。","___ do you go to the park? — By bike.",["How","Who","When","Whose"],0,"方法なので How。"),
+        q("適切な疑問詞を選びなさい。","___ is that woman? — She is my aunt.",["Who","Where","Why","How many"],0,"人なので Who。"),
+        q("適切な疑問詞を選びなさい。","___ bag is this? — It's mine.",["Who","Whose","Where","Why"],1,"所有者なので Whose。"),
+        q("正しい英文を選びなさい。","「あなたは何時に学校へ行きますか。」",["What time do you go to school?","How time do you go to school?","When time are you go to school?","What do time you go to school?"],0,"時刻は What time ...?"),
+        q("正しい英文を選びなさい。","「あなたは何個のりんごが欲しいですか。」",["How much apples do you want?","How many apples do you want?","What many apple do you want?","How apples do you want many?"],1,"数えられる複数名詞なので How many apples。")
+      ]}
+    ]
+  },
+
+  // ============================================================
+  // 命令文
+  // ============================================================
+  imperative: {
+    title: "命令文",
+    sets: [
+      {name:"命令文", questions:[
+        q("正しい命令文を選びなさい。","「窓を開けなさい。」",["You open the window.","Open the window.","Do open you the window.","Opening the window."],1,"命令文は主語を置かず、動詞の原形で始めます。"),
+        q("正しい命令文を選びなさい。","「ここに来なさい。」",["Come here.","You are come here.","Comes here.","Do you come here."],0,"Come という動詞の原形で始めます。"),
+        q("正しい否定の命令文を選びなさい。","「走ってはいけません。」",["Not run.","Don't run.","Aren't run.","Doesn't run."],1,"否定の命令文は Don't + 動詞の原形。"),
+        q("正しい英文を選びなさい。","「静かにしなさい。」",["Be quiet.","Are quiet.","Do quiet.","Quiet be you."],0,"状態を表す命令では Be + 形容詞。"),
+        q("正しい否定の命令文を選びなさい。","「遅れてはいけません。」",["Don't be late.","Don't late.","Not be late.","Aren't late."],0,"Don't be + 形容詞。"),
+        q("正しい英文を選びなさい。","「一緒にサッカーをしましょう。」",["Let's play soccer.","Let's plays soccer.","We let play soccer.","Let's playing soccer."],0,"Let's + 動詞の原形で「～しましょう」。"),
+        q("正しい英文を選びなさい。","「この本を読んでください。」",["Please read this book.","Please reads this book.","You please reading this book.","Please to read this book."],0,"Please + 動詞の原形。"),
+        q("正しい英文を選びなさい。","「そのドアを開けないでください。」",["Please not open the door.","Please don't open the door.","Please doesn't open the door.","Don't opens the door, please."],1,"Please don't + 動詞の原形。"),
+        q("正しい英文を選びなさい。","「注意しなさい。」",["Be careful.","Are careful.","Careful be.","Do careful."],0,"Be careful. はよく使う命令表現です。"),
+        q("正しい英文を選びなさい。","「昼食を食べましょう。」",["Let's have lunch.","Let's has lunch.","Let's having lunch.","Do let's have lunch."],0,"Let's の後は have の原形。")
+      ]}
+    ]
+  },
+
+  // ============================================================
+  // 三人称単数現在
+  // ============================================================
+  third: {
+    title: "三人称単数現在",
+    sets: [
+      {name:"三単現1（sの基本）", questions:[
+        q("適切な動詞を選びなさい。","Ken ___ soccer after school.",["play","plays","playing","is play"],1,"Ken は三人称単数なので plays。"),
+        q("適切な動詞を選びなさい。","I ___ soccer after school.",["play","plays","playes","playing"],0,"I は三人称単数ではないので play。"),
+        q("適切な動詞を選びなさい。","My sister ___ music.",["like","likes","likies","is like"],1,"My sister は三人称単数なので likes。"),
+        q("適切な動詞を選びなさい。","We ___ English every day.",["study","studies","studys","studying"],0,"we は複数なので原形 study。"),
+        q("適切な動詞を選びなさい。","He ___ to school.",["walk","walks","walkes","walking"],1,"he は三人称単数なので walks。"),
+        q("適切な動詞を選びなさい。","They ___ TV after dinner.",["watch","watches","watchs","watching"],0,"they は複数なので watch。"),
+        q("正しい英文を選びなさい。","「ユキは英語を話します。」",["Yuki speak English.","Yuki speaks English.","Yuki speaking English.","Yuki is speak English."],1,"Yuki は三人称単数なので speaks。"),
+        q("正しい英文を選びなさい。","「私の父は車を持っています。」",["My father have a car.","My father has a car.","My father haves a car.","My father is have a car."],1,"have の三単現は has。")
+      ]},
+      {name:"三単現2（es・ies）", questions:[
+        q("適切な動詞を選びなさい。","Ken ___ TV every day.",["watch","watchs","watches","watchies"],2,"-ch で終わる動詞には -es を付けます。"),
+        q("適切な動詞を選びなさい。","She ___ English at school.",["teach","teachs","teaches","teachies"],2,"teach → teaches。"),
+        q("適切な動詞を選びなさい。","Tom ___ to school by bus.",["go","gos","goes","goies"],2,"go → goes。"),
+        q("適切な動詞を選びなさい。","My mother ___ the dishes.",["wash","washs","washes","washies"],2,"wash → washes。"),
+        q("適切な動詞を選びなさい。","Mike ___ English every day.",["study","studys","studies","studyes"],2,"子音字 + y は y を i に変えて -es。"),
+        q("適切な動詞を選びなさい。","Emi ___ tennis on Sunday.",["play","plays","plaies","playes"],1,"母音字 + y の play はそのまま s を付けます。"),
+        q("適切な動詞を選びなさい。","He ___ lunch at twelve.",["have","haves","has","hases"],2,"have は has になります。"),
+        q("正しい英文を選びなさい。","「彼女は毎朝早く起きます。」",["She get up early every morning.","She gets up early every morning.","She getes up early every morning.","She getting up early every morning."],1,"get → gets。")
+      ]},
+      {name:"三単現3（疑問文）", questions:[
+        q("正しい疑問文を選びなさい。","Ken plays soccer.",["Do Ken play soccer?","Does Ken play soccer?","Does Ken plays soccer?","Is Ken play soccer?"],1,"三単現の疑問文は Does + 主語 + 動詞の原形。"),
+        q("正しい疑問文を選びなさい。","Yumi studies English.",["Does Yumi study English?","Does Yumi studies English?","Do Yumi study English?","Is Yumi study English?"],0,"Does を使うと動詞は原形 study に戻ります。"),
+        q("正しい疑問文を選びなさい。","Your father watches TV.",["Do your father watch TV?","Does your father watch TV?","Does your father watches TV?","Is your father watch TV?"],1,"your father は三人称単数。"),
+        q("適切な答えを選びなさい。","Does Ken like music?",["Yes, he does.","Yes, he do.","Yes, he is.","Yes, Ken likes."],0,"Does ...? → Yes, he does."),
+        q("適切な答えを選びなさい。","Does Emi play tennis?",["No, she don't.","No, she doesn't.","No, she isn't.","No, she not."],1,"Does ...? → No, she doesn't."),
+        q("正しい英文を選びなさい。","「あなたのお母さんは料理をしますか。」",["Do your mother cook?","Does your mother cook?","Does your mother cooks?","Is your mother cook?"],1,"your mother は三人称単数なので Does。"),
+        q("正しい英文を選びなさい。","「彼は英語を話しますか。」",["Do he speak English?","Does he speak English?","Does he speaks English?","Is he speak English?"],1,"Does he + speak ...?"),
+        q("正しい英文を選びなさい。","「その犬は毎日走りますか。」",["Do the dog run every day?","Does the dog run every day?","Does the dog runs every day?","Is the dog run every day?"],1,"the dog は三人称単数です。")
+      ]},
+      {name:"三単現4（否定・総合）", questions:[
+        q("正しい否定文を選びなさい。","Ken goes to school by bike.",["Ken don't go to school by bike.","Ken doesn't go to school by bike.","Ken doesn't goes to school by bike.","Ken isn't go to school by bike."],1,"doesn't の後は原形 go。"),
+        q("正しい否定文を選びなさい。","Yumi watches TV after dinner.",["Yumi doesn't watch TV after dinner.","Yumi doesn't watches TV after dinner.","Yumi don't watch TV after dinner.","Yumi isn't watch TV after dinner."],0,"doesn't + watch。"),
+        q("正しい否定文を選びなさい。","My brother studies math.",["My brother doesn't study math.","My brother doesn't studies math.","My brother don't study math.","My brother isn't study math."],0,"doesn't の後では studies → study。"),
+        q("正しい英文を選びなさい。","「彼女は犬を飼っていません。」",["She doesn't have a dog.","She doesn't has a dog.","She don't have a dog.","She isn't have a dog."],0,"doesn't + have。"),
+        q("正しい組み合わせを選びなさい。","He ___ tennis. / Does he ___ tennis?",["plays / play","play / plays","plays / plays","play / play"],0,"肯定文では plays、Does の後では play。"),
+        q("正しい組み合わせを選びなさい。","Yuki ___ English. / Yuki doesn't ___ English.",["studies / study","study / studies","studies / studies","study / study"],0,"肯定文 studies、doesn't の後は study。"),
+        q("誤りのない英文を選びなさい。","",["Does Tom likes music?","Tom doesn't likes music.","Tom likes music.","Tom don't like music."],2,"肯定文では Tom likes music. が正しい形。"),
+        q("正しい英文を選びなさい。","「ケンは毎朝6時に起きます。」",["Ken get up at six every morning.","Ken gets up at six every morning.","Ken getes up at six every morning.","Ken is get up at six every morning."],1,"Ken は三人称単数なので gets。"),
+        q("正しい英文を選びなさい。","「メアリーは学校で英語を教えます。」",["Mary teach English at school.","Mary teaches English at school.","Mary teachs English at school.","Mary teaching English at school."],1,"teach → teaches。"),
+        q("正しい英文を選びなさい。","「彼は日曜日にはテニスをしません。」",["He doesn't play tennis on Sunday.","He doesn't plays tennis on Sunday.","He don't play tennis on Sunday.","He isn't play tennis on Sunday."],0,"三単現の否定文は doesn't + 動詞の原形。")
+      ]}
+    ]
+  },
+  progressive: {"title":"現在進行形","sets":[{"name":"現在進行形1（肯定文）","questions":[{"instruction":"正しい英文を選びなさい。","text":"「私は今、英語を勉強しています。」","choices":["I study English now.","I am studying English now.","I studying English now.","I am study English now."],"answer":1,"explanation":"現在進行形は be動詞 + 動詞のing形。"},{"instruction":"適切な形を選びなさい。","text":"Ken ___ TV now.","choices":["watches","is watching","watching","is watch"],"answer":1,"explanation":"Ken は単数なので is watching。"},{"instruction":"適切な形を選びなさい。","text":"They ___ soccer now.","choices":["play","are playing","is playing","are play"],"answer":1,"explanation":"they + are + playing。"},{"instruction":"ing形を選びなさい。","text":"use","choices":["useing","using","ussing","used"],"answer":1,"explanation":"語尾の e を取って using。"},{"instruction":"ing形を選びなさい。","text":"run","choices":["runing","running","runs","runnning"],"answer":1,"explanation":"短母音+子音字なので n を重ねて running。"},{"instruction":"正しい英文を選びなさい。","text":"「ユミは今コンピュータを使っています。」","choices":["Yumi uses a computer now.","Yumi is using a computer now.","Yumi are using a computer now.","Yumi is use a computer now."],"answer":1,"explanation":"Yumi is using ..."}]},{"name":"現在進行形2（肯定文）","questions":[{"instruction":"現在進行形を選びなさい。","text":"We speak English.","choices":["We are speaking English now.","We speaking English now.","We are speak English now.","We speaks English now."],"answer":0,"explanation":"we + are speaking。"},{"instruction":"現在進行形を選びなさい。","text":"Ms. Green writes a letter.","choices":["Ms. Green writing a letter.","Ms. Green is writing a letter.","Ms. Green is write a letter.","Ms. Green writesing a letter."],"answer":1,"explanation":"write → writing。"},{"instruction":"ing形を選びなさい。","text":"swim","choices":["swiming","swimming","swimingg","swims"],"answer":1,"explanation":"m を重ねて swimming。"},{"instruction":"ing形を選びなさい。","text":"make","choices":["makeing","making","makking","makes"],"answer":1,"explanation":"e を取って making。"},{"instruction":"正しい英文を選びなさい。","text":"「彼は今、昼食を食べています。」","choices":["He has lunch now.","He is having lunch now.","He are having lunch now.","He is have lunch now."],"answer":1,"explanation":"have → having。"},{"instruction":"正しい英文を選びなさい。","text":"「私たちは今、公園を走っています。」","choices":["We run in the park now.","We are running in the park now.","We is running in the park now.","We are runing in the park now."],"answer":1,"explanation":"are running が正しい形。"}]},{"name":"現在進行形3（疑問・否定）","questions":[{"instruction":"正しい疑問文を選びなさい。","text":"Ken is sleeping now.","choices":["Does Ken sleeping now?","Is Ken sleeping now?","Is Ken sleep now?","Ken is sleeping now?"],"answer":1,"explanation":"be動詞を主語の前へ。"},{"instruction":"正しい否定文を選びなさい。","text":"They are listening to music.","choices":["They don't listening to music.","They aren't listening to music.","They aren't listen to music.","They not are listening to music."],"answer":1,"explanation":"be動詞の後に not。"},{"instruction":"適切な答えを選びなさい。","text":"Are you studying now?","choices":["Yes, I do.","Yes, I am.","Yes, I study.","Yes, you are."],"answer":1,"explanation":"Are you ...? → Yes, I am."},{"instruction":"適切な答えを選びなさい。","text":"Is Emi cooking now?","choices":["No, she doesn't.","No, she isn't.","No, she don't.","No, she not."],"answer":1,"explanation":"Is Emi ...? → No, she isn't."},{"instruction":"正しい英文を選びなさい。","text":"「彼らは今歩いていますか。」","choices":["Do they walking now?","Are they walking now?","Is they walking now?","Are they walk now?"],"answer":1,"explanation":"Are they + ing ...?"},{"instruction":"正しい英文を選びなさい。","text":"「私は今、朝食を食べていません。」","choices":["I don't having breakfast now.","I'm not having breakfast now.","I am not have breakfast now.","I don't haveing breakfast now."],"answer":1,"explanation":"am not having。"}]},{"name":"現在進行形4（総合）","questions":[{"instruction":"正しい組み合わせを選びなさい。","text":"I ___ a computer every day. / I ___ a computer now.","choices":["use / am using","am using / use","uses / using","use / using"],"answer":0,"explanation":"習慣は現在形、今の動作は現在進行形。"},{"instruction":"正しい英文を選びなさい。","text":"「あなたは今何をしていますか。」","choices":["What do you do now?","What are you doing now?","What you are doing now?","What are you do now?"],"answer":1,"explanation":"What are you doing now?"},{"instruction":"適切な形を選びなさい。","text":"Look! The dog ___ .","choices":["runs","is running","run","are running"],"answer":1,"explanation":"今まさにしている動作なので現在進行形。"},{"instruction":"正しい英文を選びなさい。","text":"「母は今、台所で料理しています。」","choices":["My mother cooks in the kitchen now.","My mother is cooking in the kitchen now.","My mother are cooking in the kitchen now.","My mother cooking in the kitchen now."],"answer":1,"explanation":"is cooking。"},{"instruction":"誤りのない英文を選びなさい。","text":"","choices":["He is play tennis now.","He playing tennis now.","He is playing tennis now.","He does playing tennis now."],"answer":2,"explanation":"be動詞 + ing形。"},{"instruction":"適切な答えを選びなさい。","text":"What is Tom doing?","choices":["He is reading a book.","Yes, he is.","He reads every day.","No, he isn't."],"answer":0,"explanation":"What ... doing? には動作内容を答えます。"}]}]},
+  can: {"title":"can","sets":[{"name":"助動詞can","questions":[{"instruction":"正しい英文を選びなさい。","text":"「私は泳ぐことができます。」","choices":["I can swim.","I can swims.","I am can swim.","I can swimming."],"answer":0,"explanation":"can の後は動詞の原形。"},{"instruction":"正しい英文を選びなさい。","text":"「彼は英語を話すことができます。」","choices":["He can speaks English.","He can speak English.","He cans speak English.","He is can speak English."],"answer":1,"explanation":"三単現でも can の後は原形 speak。"},{"instruction":"正しい否定文を選びなさい。","text":"She can play the piano.","choices":["She doesn't can play the piano.","She cannot play the piano.","She can not plays the piano.","She isn't can play the piano."],"answer":1,"explanation":"can の否定は cannot / can't。"},{"instruction":"正しい疑問文を選びなさい。","text":"You can cook.","choices":["Do you can cook?","Can you cook?","Are you can cook?","Can you cooks?"],"answer":1,"explanation":"Can + 主語 + 動詞の原形?"},{"instruction":"適切な答えを選びなさい。","text":"Can you swim?","choices":["Yes, I can.","Yes, I do.","Yes, I am.","Yes, I swim can."],"answer":0,"explanation":"Can you ...? → Yes, I can."},{"instruction":"正しい英文を選びなさい。","text":"「ケンは自転車に乗れません。」","choices":["Ken doesn't can ride a bike.","Ken can't ride a bike.","Ken can't rides a bike.","Ken isn't ride a bike."],"answer":1,"explanation":"can't + 動詞の原形。"}]},{"name":"助動詞can2","questions":[{"instruction":"正しい英文を選びなさい。","text":"「あなたはギターを弾けますか。」","choices":["Do you can play the guitar?","Can you play the guitar?","Can you plays the guitar?","Are you play the guitar?"],"answer":1,"explanation":"Can you + play ...?"},{"instruction":"適切な答えを選びなさい。","text":"Can Emi speak English?","choices":["No, she can't.","No, she doesn't.","No, she isn't.","No, she don't."],"answer":0,"explanation":"Can ...? → can't で答えます。"},{"instruction":"正しい英文を選びなさい。","text":"「私は速く走ることができません。」","choices":["I don't can run fast.","I can't run fast.","I can't runs fast.","I am not run fast."],"answer":1,"explanation":"can't run。"},{"instruction":"正しい英文を選びなさい。","text":"「ここで写真を撮ってもいいですか。」","choices":["Can I take a picture here?","Do I can take a picture here?","Can I takes a picture here?","Am I take a picture here?"],"answer":0,"explanation":"Can I ...? は許可を求める表現にも使えます。"},{"instruction":"正しい英文を選びなさい。","text":"「手伝ってくれますか。」","choices":["Can you help me?","Do you can help me?","Can you helps me?","Are you help me?"],"answer":0,"explanation":"Can you ...? は依頼にも使えます。"},{"instruction":"誤りのない英文を選びなさい。","text":"","choices":["He cans swim.","He can swims.","He can swim.","He can to swim."],"answer":2,"explanation":"can の後は原形のみ。"}]}]},
+  past: {"title":"一般動詞の過去","sets":[{"name":"過去1（規則変化）","questions":[{"instruction":"過去形を選びなさい。","text":"play","choices":["playd","played","plays","playing"],"answer":1,"explanation":"基本は -ed。"},{"instruction":"過去形を選びなさい。","text":"use","choices":["useed","used","using","uses"],"answer":1,"explanation":"e で終わるので -d。"},{"instruction":"過去形を選びなさい。","text":"study","choices":["studyed","studied","studys","studing"],"answer":1,"explanation":"子音字+y → yをiに変えて -ed。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日テニスをしました。」","choices":["I play tennis yesterday.","I played tennis yesterday.","I plays tennis yesterday.","I did played tennis yesterday."],"answer":1,"explanation":"yesterday があり過去なので played。"},{"instruction":"正しい英文を選びなさい。","text":"「彼女は昨夜テレビを見ました。」","choices":["She watched TV last night.","She watches TV last night.","She watch TV last night.","She did watched TV last night."],"answer":0,"explanation":"watch → watched。"},{"instruction":"過去形を選びなさい。","text":"stop","choices":["stoped","stopped","stopt","stopping"],"answer":1,"explanation":"短母音+子音字なので p を重ねて stopped。"}]},{"name":"過去2（不規則変化）","questions":[{"instruction":"過去形を選びなさい。","text":"go","choices":["goed","went","gone","goes"],"answer":1,"explanation":"go → went。"},{"instruction":"過去形を選びなさい。","text":"see","choices":["seed","saw","seen","sees"],"answer":1,"explanation":"see → saw。"},{"instruction":"過去形を選びなさい。","text":"come","choices":["comed","came","come","comes"],"answer":1,"explanation":"come → came。"},{"instruction":"過去形を選びなさい。","text":"have","choices":["haved","had","has","having"],"answer":1,"explanation":"have → had。"},{"instruction":"過去形を選びなさい。","text":"take","choices":["taked","took","taken","takes"],"answer":1,"explanation":"take → took。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日その本を読みました。」","choices":["I read the book yesterday.","I readed the book yesterday.","I reads the book yesterday.","I did readed the book yesterday."],"answer":0,"explanation":"read の過去形も綴りは read（発音は /red/）。"}]},{"name":"過去3（疑問文）","questions":[{"instruction":"正しい疑問文を選びなさい。","text":"Ken played soccer.","choices":["Did Ken play soccer?","Did Ken played soccer?","Does Ken play soccer?","Was Ken play soccer?"],"answer":0,"explanation":"過去の一般動詞の疑問文は Did + 原形。"},{"instruction":"正しい疑問文を選びなさい。","text":"Yumi went to Tokyo.","choices":["Did Yumi went to Tokyo?","Did Yumi go to Tokyo?","Does Yumi go to Tokyo?","Was Yumi go to Tokyo?"],"answer":1,"explanation":"Did の後は went ではなく go。"},{"instruction":"適切な答えを選びなさい。","text":"Did you watch TV?","choices":["Yes, I did.","Yes, I do.","Yes, I was.","Yes, I watched did."],"answer":0,"explanation":"Did you ...? → Yes, I did."},{"instruction":"適切な答えを選びなさい。","text":"Did Tom study English?","choices":["No, he didn't.","No, he doesn't.","No, he wasn't.","No, he not."],"answer":0,"explanation":"Did ...? → No, he didn't."},{"instruction":"正しい英文を選びなさい。","text":"「あなたは昨日学校へ行きましたか。」","choices":["Do you go to school yesterday?","Did you go to school yesterday?","Did you went to school yesterday?","Were you go to school yesterday?"],"answer":1,"explanation":"Did + go。"},{"instruction":"正しい英文を選びなさい。","text":"「彼女はその映画を見ましたか。」","choices":["Did she see the movie?","Did she saw the movie?","Does she see the movie?","Was she see the movie?"],"answer":0,"explanation":"Did + see。"}]},{"name":"過去4（否定文）","questions":[{"instruction":"正しい否定文を選びなさい。","text":"I played tennis.","choices":["I don't play tennis.","I didn't play tennis.","I didn't played tennis.","I wasn't play tennis."],"answer":1,"explanation":"didn't + 原形。"},{"instruction":"正しい否定文を選びなさい。","text":"Ken went to school.","choices":["Ken didn't go to school.","Ken didn't went to school.","Ken doesn't go to school.","Ken wasn't go to school."],"answer":0,"explanation":"didn't の後は go。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日忙しく働きませんでした。」","choices":["I didn't work hard yesterday.","I didn't worked hard yesterday.","I don't work hard yesterday.","I wasn't work hard yesterday."],"answer":0,"explanation":"didn't + work。"},{"instruction":"正しい英文を選びなさい。","text":"「彼女は朝食を食べませんでした。」","choices":["She didn't have breakfast.","She didn't had breakfast.","She doesn't have breakfast.","She wasn't have breakfast."],"answer":0,"explanation":"didn't + have。"},{"instruction":"誤りのない英文を選びなさい。","text":"","choices":["He didn't came here.","He didn't come here.","He doesn't came here.","He not came here."],"answer":1,"explanation":"didn't + come。"},{"instruction":"適切な答えを選びなさい。","text":"Did they enjoy the game?","choices":["No, they didn't.","No, they don't.","No, they weren't.","No, they aren't."],"answer":0,"explanation":"過去の疑問なので didn't。"}]},{"name":"過去5（総合）","questions":[{"instruction":"適切な形を選びなさい。","text":"We ___ shopping yesterday.","choices":["go","went","goes","going"],"answer":1,"explanation":"yesterday → went。"},{"instruction":"正しい組み合わせを選びなさい。","text":"Ken ___ tennis yesterday. / Did Ken ___ tennis?","choices":["played / play","play / played","played / played","plays / play"],"answer":0,"explanation":"肯定文は played、Did の後は play。"},{"instruction":"正しい英文を選びなさい。","text":"「私は3日前にその写真を撮りました。」","choices":["I take the picture three days ago.","I took the picture three days ago.","I taken the picture three days ago.","I did took the picture three days ago."],"answer":1,"explanation":"take → took。"},{"instruction":"正しい英文を選びなさい。","text":"「彼らは昨年京都を訪れませんでした。」","choices":["They didn't visit Kyoto last year.","They didn't visited Kyoto last year.","They don't visit Kyoto last year.","They weren't visit Kyoto last year."],"answer":0,"explanation":"didn't + visit。"},{"instruction":"適切な形を選びなさい。","text":"My mother ___ a cake last Sunday.","choices":["make","made","maked","makes"],"answer":1,"explanation":"make → made。"},{"instruction":"適切な形を選びなさい。","text":"I ___ a letter to my friend yesterday.","choices":["write","wrote","written","writed"],"answer":1,"explanation":"write → wrote。"}]}]},
+  plural: {"title":"名詞の複数形","sets":[{"name":"複数形・a・an","questions":[{"instruction":"正しい複数形を選びなさい。","text":"book","choices":["books","bookes","bookies","book"],"answer":0,"explanation":"基本は -s。"},{"instruction":"正しい複数形を選びなさい。","text":"box","choices":["boxs","boxes","boxies","boxen"],"answer":1,"explanation":"-x で終わるので -es。"},{"instruction":"正しい複数形を選びなさい。","text":"city","choices":["citys","cities","cityes","citis"],"answer":1,"explanation":"子音字+y → yをiに変えて -es。"},{"instruction":"正しい複数形を選びなさい。","text":"child","choices":["childs","childes","children","childrens"],"answer":2,"explanation":"child → children は不規則変化。"},{"instruction":"適切な語を選びなさい。","text":"This is ___ apple.","choices":["a","an","two","some"],"answer":1,"explanation":"apple は母音の音で始まるので an。"},{"instruction":"適切な語を選びなさい。","text":"I have ___ dog.","choices":["a","an","two","many"],"answer":0,"explanation":"単数の可算名詞 dog には a。"},{"instruction":"正しい英文を選びなさい。","text":"「私は2本のペンを持っています。」","choices":["I have two pen.","I have two pens.","I have a two pens.","I have two penes."],"answer":1,"explanation":"two の後は複数形 pens。"},{"instruction":"正しい複数形を選びなさい。","text":"woman","choices":["womans","women","womens","womanes"],"answer":1,"explanation":"woman → women。"}]}]},
+  pronoun: {"title":"代名詞","sets":[{"name":"人称代名詞","questions":[{"instruction":"適切な語を選びなさい。","text":"Ken is my friend. ___ is kind.","choices":["He","Him","His","Her"],"answer":0,"explanation":"Ken を主語として受けるので He。"},{"instruction":"適切な語を選びなさい。","text":"I like Emi. I often talk with ___.","choices":["she","her","hers","he"],"answer":1,"explanation":"前置詞 with の後なので目的格 her。"},{"instruction":"適切な語を選びなさい。","text":"This is ___ book.（私の本）","choices":["I","me","my","mine"],"answer":2,"explanation":"名詞 book の前なので所有格 my。"},{"instruction":"適切な語を選びなさい。","text":"This book is ___.（私のもの）","choices":["I","me","my","mine"],"answer":3,"explanation":"名詞を伴わず「私のもの」は mine。"},{"instruction":"適切な語を選びなさい。","text":"Tom and I are students. ___ are classmates.","choices":["They","We","You","Us"],"answer":1,"explanation":"Tom and I を主語で受けると We。"},{"instruction":"適切な語を選びなさい。","text":"I know Tom and Ken. I like ___.","choices":["they","their","them","theirs"],"answer":2,"explanation":"目的格は them。"},{"instruction":"適切な語を選びなさい。","text":"This is Yuki's bag. It is ___.","choices":["she","her","hers","his"],"answer":2,"explanation":"「彼女のもの」は hers。"},{"instruction":"適切な語を選びなさい。","text":"My father helps ___.（私を）","choices":["I","my","me","mine"],"answer":2,"explanation":"目的格 me。"},{"instruction":"適切な語を選びなさい。","text":"___ mother is a teacher.（彼の母）","choices":["He","Him","His","He's"],"answer":2,"explanation":"名詞 mother の前なので His。"},{"instruction":"適切な語を選びなさい。","text":"These dogs are ___.（彼らのもの）","choices":["they","them","their","theirs"],"answer":3,"explanation":"「彼らのもの」は theirs。"}]}]},
+  bepast: {"title":"be動詞過去","sets":[{"name":"一般動詞過去形（復習1）","questions":[{"instruction":"過去形を選びなさい。","text":"visit","choices":["visited","visitted","visits","visit"],"answer":0,"explanation":"visit → visited。"},{"instruction":"過去形を選びなさい。","text":"buy","choices":["buyed","bought","brought","buys"],"answer":1,"explanation":"buy → bought。"},{"instruction":"過去形を選びなさい。","text":"get","choices":["getted","got","gets","gotten"],"answer":1,"explanation":"get → got。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日早く起きました。」","choices":["I get up early yesterday.","I got up early yesterday.","I gets up early yesterday.","I did got up early yesterday."],"answer":1,"explanation":"get → got。"},{"instruction":"正しい疑問文を選びなさい。","text":"She saw Ken.","choices":["Did she see Ken?","Did she saw Ken?","Does she see Ken?","Was she see Ken?"],"answer":0,"explanation":"Did + see。"},{"instruction":"正しい否定文を選びなさい。","text":"He came here.","choices":["He didn't come here.","He didn't came here.","He doesn't come here.","He wasn't come here."],"answer":0,"explanation":"didn't + come。"}]},{"name":"一般動詞過去形（復習2）","questions":[{"instruction":"過去形を選びなさい。","text":"eat","choices":["eated","ate","eaten","eats"],"answer":1,"explanation":"eat → ate。"},{"instruction":"過去形を選びなさい。","text":"write","choices":["writed","wrote","written","writes"],"answer":1,"explanation":"write → wrote。"},{"instruction":"過去形を選びなさい。","text":"speak","choices":["speaked","spoke","spoken","speaks"],"answer":1,"explanation":"speak → spoke。"},{"instruction":"正しい英文を選びなさい。","text":"「彼らは昨日野球をしました。」","choices":["They played baseball yesterday.","They play baseball yesterday.","They did played baseball yesterday.","They were play baseball yesterday."],"answer":0,"explanation":"played が過去形。"},{"instruction":"適切な答えを選びなさい。","text":"Did Mike go to Tokyo?","choices":["Yes, he did.","Yes, he was.","Yes, he does.","Yes, he went did."],"answer":0,"explanation":"Did ...? → did。"},{"instruction":"正しい否定文を選びなさい。","text":"Yumi studied math.","choices":["Yumi didn't study math.","Yumi didn't studied math.","Yumi doesn't study math.","Yumi wasn't study math."],"answer":0,"explanation":"didn't + study。"}]},{"name":"be動詞過去形3","questions":[{"instruction":"適切な語を選びなさい。","text":"I ___ busy yesterday.","choices":["am","is","was","were"],"answer":2,"explanation":"am の過去形は was。"},{"instruction":"適切な語を選びなさい。","text":"They ___ in Tokyo last week.","choices":["are","was","were","is"],"answer":2,"explanation":"are の過去形で複数主語は were。"},{"instruction":"適切な語を選びなさい。","text":"Ken ___ at home yesterday.","choices":["is","were","was","are"],"answer":2,"explanation":"Ken は単数なので was。"},{"instruction":"正しい英文を選びなさい。","text":"「私たちは昨日忙しかった。」","choices":["We was busy yesterday.","We were busy yesterday.","We are busy yesterday.","We did busy yesterday."],"answer":1,"explanation":"we + were。"},{"instruction":"正しい英文を選びなさい。","text":"「その本は面白かった。」","choices":["The book were interesting.","The book was interesting.","The book is interesting yesterday.","The book did interesting."],"answer":1,"explanation":"単数なので was。"},{"instruction":"正しい英文を選びなさい。","text":"「あなたは昨日学校にいました。」","choices":["You was at school yesterday.","You were at school yesterday.","You are at school yesterday.","You did at school yesterday."],"answer":1,"explanation":"you の過去のbe動詞は were。"}]},{"name":"be動詞過去1（疑問文）","questions":[{"instruction":"正しい疑問文を選びなさい。","text":"Ken was busy.","choices":["Did Ken busy?","Was Ken busy?","Were Ken busy?","Ken was busy?"],"answer":1,"explanation":"was を主語の前へ。"},{"instruction":"正しい疑問文を選びなさい。","text":"They were in the park.","choices":["Did they in the park?","Was they in the park?","Were they in the park?","They were in the park?"],"answer":2,"explanation":"were を主語の前へ。"},{"instruction":"適切な答えを選びなさい。","text":"Were you tired?","choices":["Yes, I was.","Yes, I did.","Yes, I were.","Yes, I am."],"answer":0,"explanation":"Were you ...? → Yes, I was."},{"instruction":"適切な答えを選びなさい。","text":"Was Emi at home?","choices":["No, she wasn't.","No, she didn't.","No, she weren't.","No, she isn't."],"answer":0,"explanation":"Was ...? → wasn't。"},{"instruction":"正しい英文を選びなさい。","text":"「あなたは昨日暇でしたか。」","choices":["Did you free yesterday?","Were you free yesterday?","Was you free yesterday?","Are you free yesterday?"],"answer":1,"explanation":"you + were。"},{"instruction":"正しい英文を選びなさい。","text":"「その映画は面白かったですか。」","choices":["Did the movie interesting?","Was the movie interesting?","Were the movie interesting?","Is the movie interesting yesterday?"],"answer":1,"explanation":"the movie は単数なので Was。"}]},{"name":"be動詞過去2（否定文）","questions":[{"instruction":"正しい否定文を選びなさい。","text":"I was busy.","choices":["I didn't busy.","I wasn't busy.","I weren't busy.","I not was busy."],"answer":1,"explanation":"was not = wasn't。"},{"instruction":"正しい否定文を選びなさい。","text":"They were at school.","choices":["They didn't at school.","They wasn't at school.","They weren't at school.","They not were at school."],"answer":2,"explanation":"were not = weren't。"},{"instruction":"正しい英文を選びなさい。","text":"「ケンは昨日家にいませんでした。」","choices":["Ken didn't at home yesterday.","Ken wasn't at home yesterday.","Ken weren't at home yesterday.","Ken isn't at home yesterday."],"answer":1,"explanation":"Ken + wasn't。"},{"instruction":"正しい英文を選びなさい。","text":"「私たちは疲れていませんでした。」","choices":["We weren't tired.","We wasn't tired.","We didn't tired.","We aren't tired yesterday."],"answer":0,"explanation":"we + weren't。"},{"instruction":"適切な形を選びなさい。","text":"The books ___ new.","choices":["wasn't","weren't","didn't","isn't"],"answer":1,"explanation":"books は複数なので weren't。"},{"instruction":"誤りのない英文を選びなさい。","text":"","choices":["You wasn't busy.","You weren't busy.","You didn't busy.","You not were busy."],"answer":1,"explanation":"you + were / weren't。"}]},{"name":"be動詞・一般動詞過去1","questions":[{"instruction":"正しい過去形を選びなさい。","text":"We play baseball.","choices":["We played baseball.","We were play baseball.","We was baseball.","We did played baseball."],"answer":0,"explanation":"一般動詞 play → played。"},{"instruction":"正しい過去形を選びなさい。","text":"Mike is in Tokyo.","choices":["Mike did in Tokyo.","Mike was in Tokyo.","Mike were in Tokyo.","Mike went in Tokyo."],"answer":1,"explanation":"is → was。"},{"instruction":"正しい過去形を選びなさい。","text":"They are busy.","choices":["They was busy.","They were busy.","They did busy.","They are busy yesterday."],"answer":1,"explanation":"are → were。"},{"instruction":"正しい疑問文を選びなさい。","text":"They watched TV.","choices":["Did they watch TV?","Were they watch TV?","Did they watched TV?","Was they watch TV?"],"answer":0,"explanation":"一般動詞なので Did。"},{"instruction":"正しい疑問文を選びなさい。","text":"This book was interesting.","choices":["Did this book interesting?","Was this book interesting?","Were this book interesting?","Does this book interesting?"],"answer":1,"explanation":"be動詞 was を前へ。"},{"instruction":"正しい否定文を選びなさい。","text":"My notebook was on the desk.","choices":["My notebook didn't on the desk.","My notebook wasn't on the desk.","My notebook weren't on the desk.","My notebook doesn't on the desk."],"answer":1,"explanation":"be動詞なので wasn't。"}]},{"name":"be動詞・一般動詞過去2","questions":[{"instruction":"正しい疑問文を選びなさい。","text":"She saw many people.","choices":["Was she see many people?","Did she see many people?","Did she saw many people?","Were she see many people?"],"answer":1,"explanation":"一般動詞なので Did + see。"},{"instruction":"正しい否定文を選びなさい。","text":"They were good friends.","choices":["They didn't good friends.","They weren't good friends.","They wasn't good friends.","They don't good friends."],"answer":1,"explanation":"be動詞 were の否定。"},{"instruction":"正しい英文を選びなさい。","text":"「彼は昨日学校へ来ませんでした。」","choices":["He wasn't come to school yesterday.","He didn't come to school yesterday.","He didn't came to school yesterday.","He weren't come to school yesterday."],"answer":1,"explanation":"一般動詞 come なので didn't come。"},{"instruction":"正しい英文を選びなさい。","text":"「彼女は昨日忙しかったです。」","choices":["She did busy yesterday.","She was busy yesterday.","She were busy yesterday.","She is busy yesterday."],"answer":1,"explanation":"busy は形容詞なので was。"},{"instruction":"正しい組み合わせを選びなさい。","text":"Ken ___ at home. / Ken ___ TV.","choices":["was / watched","did / was","watched / was","were / watched"],"answer":0,"explanation":"場所・状態は was、動作は watched。"},{"instruction":"適切な答えを選びなさい。","text":"Was Tom in the library?","choices":["Yes, he was.","Yes, he did.","Yes, he were.","Yes, he is."],"answer":0,"explanation":"Was ...? → was。"}]},{"name":"be動詞・一般動詞過去3","questions":[{"instruction":"正しい英文を選びなさい。","text":"「私は昨日学生でした。」","choices":["I did a student yesterday.","I was a student yesterday.","I were a student yesterday.","I am a student yesterday."],"answer":1,"explanation":"I + was。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日買い物に行きました。」","choices":["I was shopping yesterday.","I went shopping yesterday.","I did went shopping yesterday.","I go shopping yesterday."],"answer":1,"explanation":"go → went。"},{"instruction":"正しい疑問文を選びなさい。","text":"Mr. Brown was busy.","choices":["Did Mr. Brown busy?","Was Mr. Brown busy?","Were Mr. Brown busy?","Does Mr. Brown busy?"],"answer":1,"explanation":"be動詞の過去なので Was。"},{"instruction":"正しい疑問文を選びなさい。","text":"Mr. Brown worked hard.","choices":["Was Mr. Brown work hard?","Did Mr. Brown work hard?","Did Mr. Brown worked hard?","Were Mr. Brown work hard?"],"answer":1,"explanation":"一般動詞なので Did。"},{"instruction":"正しい否定文を選びなさい。","text":"You were a teacher.","choices":["You didn't a teacher.","You weren't a teacher.","You wasn't a teacher.","You don't a teacher."],"answer":1,"explanation":"you + weren't。"},{"instruction":"正しい否定文を選びなさい。","text":"You taught English.","choices":["You weren't teach English.","You didn't teach English.","You didn't taught English.","You don't taught English."],"answer":1,"explanation":"didn't + teach。"}]},{"name":"現在・過去（総合）","questions":[{"instruction":"適切な形を選びなさい。","text":"Emi ___ up at six every morning.","choices":["get","gets","got","was getting"],"answer":1,"explanation":"every morning は現在の習慣、Emi は三単現なので gets。"},{"instruction":"適切な形を選びなさい。","text":"We ___ shopping yesterday.","choices":["go","goes","went","are going"],"answer":2,"explanation":"yesterday → went。"},{"instruction":"適切な形を選びなさい。","text":"My mother ___ in the kitchen now.","choices":["cooks","cooked","is cooking","was cooking"],"answer":2,"explanation":"now → 現在進行形。"},{"instruction":"適切な形を選びなさい。","text":"They ___ in the river then.","choices":["swim","are swimming","were swimming","swam every day"],"answer":2,"explanation":"then のその時点で進行中 → were swimming。"},{"instruction":"正しい疑問文を選びなさい。","text":"Ken caught some fish.","choices":["Did Ken catch any fish?","Was Ken catch any fish?","Did Ken caught any fish?","Does Ken catch any fish?"],"answer":0,"explanation":"一般動詞過去なので Did + catch。"},{"instruction":"正しい英文を選びなさい。","text":"「あなたはそのとき何をしていましたか。」","choices":["What did you do now?","What were you doing then?","What are you doing then?","What were you do then?"],"answer":1,"explanation":"過去進行形の疑問文。"}]}]},
+  pastprog: {"title":"過去進行形","sets":[{"name":"過去進行形4（基本）","questions":[{"instruction":"正しい英文を選びなさい。","text":"「私はそのときテレビを見ていました。」","choices":["I watched TV then.","I was watching TV then.","I am watching TV then.","I were watching TV then."],"answer":1,"explanation":"過去進行形は was/were + ing。"},{"instruction":"適切な形を選びなさい。","text":"They ___ soccer then.","choices":["played","were playing","are playing","was playing"],"answer":1,"explanation":"they + were playing。"},{"instruction":"適切な形を選びなさい。","text":"Ken ___ a book then.","choices":["was reading","were reading","read now","is reading then"],"answer":0,"explanation":"Ken は単数なので was reading。"},{"instruction":"正しい英文を選びなさい。","text":"「私たちはそのとき昼食を食べていました。」","choices":["We ate lunch then.","We were eating lunch then.","We was eating lunch then.","We are eating lunch then."],"answer":1,"explanation":"we + were eating。"},{"instruction":"正しい組み合わせを選びなさい。","text":"I ___ TV now. / I ___ TV then.","choices":["am watching / was watching","was watching / am watching","watch / watching","am watch / was watch"],"answer":0,"explanation":"now は現在進行、then は過去進行。"},{"instruction":"適切な形を選びなさい。","text":"Lisa ___ tennis at that time.","choices":["plays","is playing","was playing","were playing"],"answer":2,"explanation":"Lisa は単数なので was playing。"}]},{"name":"過去進行形1","questions":[{"instruction":"正しい英文を選びなさい。","text":"「彼らは公園で走っていました。」","choices":["They ran in the park.","They were running in the park.","They was running in the park.","They are running in the park then."],"answer":1,"explanation":"they + were running。"},{"instruction":"正しい英文を選びなさい。","text":"「彼はそのとき本を読んでいました。」","choices":["He was reading a book then.","He were reading a book then.","He read a book now.","He is reading a book then."],"answer":0,"explanation":"he + was reading。"},{"instruction":"正しい英文を選びなさい。","text":"「私はそのときコンピュータを使っていました。」","choices":["I used a computer then.","I was using a computer then.","I were using a computer then.","I am using a computer then."],"answer":1,"explanation":"I + was using。"},{"instruction":"適切な形を選びなさい。","text":"We ___ English at that time.","choices":["speak","spoke","were speaking","was speaking"],"answer":2,"explanation":"we + were speaking。"},{"instruction":"正しい英文を選びなさい。","text":"「私は今手紙を書いています。」","choices":["I was writing a letter now.","I am writing a letter now.","I wrote a letter now.","I were writing a letter now."],"answer":1,"explanation":"now なので現在進行形。"},{"instruction":"正しい英文を選びなさい。","text":"「私は昨日手紙を書きました。」","choices":["I wrote a letter yesterday.","I was writing a letter now.","I write a letter yesterday.","I did wrote a letter."],"answer":0,"explanation":"完了した過去の動作なので wrote。"}]},{"name":"過去進行形（疑問・否定）","questions":[{"instruction":"正しい疑問文を選びなさい。","text":"Ken was studying.","choices":["Did Ken studying?","Was Ken studying?","Were Ken studying?","Was Ken study?"],"answer":1,"explanation":"was を主語の前へ。"},{"instruction":"正しい疑問文を選びなさい。","text":"They were playing soccer.","choices":["Were they playing soccer?","Did they playing soccer?","Was they playing soccer?","Were they play soccer?"],"answer":0,"explanation":"were を主語の前へ。"},{"instruction":"正しい否定文を選びなさい。","text":"I was sleeping.","choices":["I didn't sleeping.","I wasn't sleeping.","I weren't sleeping.","I wasn't sleep."],"answer":1,"explanation":"was not + ing。"},{"instruction":"正しい否定文を選びなさい。","text":"We were talking.","choices":["We weren't talking.","We didn't talking.","We wasn't talking.","We weren't talk."],"answer":0,"explanation":"were not + ing。"},{"instruction":"適切な答えを選びなさい。","text":"Were you studying then?","choices":["Yes, I was.","Yes, I did.","Yes, I were.","Yes, I am."],"answer":0,"explanation":"Were you ...? → Yes, I was."},{"instruction":"正しい英文を選びなさい。","text":"「彼女はそのとき料理をしていませんでした。」","choices":["She didn't cooking then.","She wasn't cooking then.","She weren't cooking then.","She doesn't cook then."],"answer":1,"explanation":"she + wasn't cooking。"}]},{"name":"be動詞過去・過去進行形","questions":[{"instruction":"適切な形を選びなさい。","text":"I ___ in Canada then.","choices":["was","were","was being","did"],"answer":0,"explanation":"場所・状態を表すので単純な be動詞過去 was。"},{"instruction":"適切な形を選びなさい。","text":"I ___ English then.","choices":["was","studied every day","was studying","am studying"],"answer":2,"explanation":"その時していた動作なので was studying。"},{"instruction":"正しい組み合わせを選びなさい。","text":"Ken ___ busy. / Ken ___ English.","choices":["was / was studying","did / studied","was studying / was","were / was studying"],"answer":0,"explanation":"状態は was、進行中の動作は was studying。"},{"instruction":"正しい疑問文を選びなさい。","text":"Yumi was in the library.","choices":["Did Yumi in the library?","Was Yumi in the library?","Was Yumi being in the library?","Were Yumi in the library?"],"answer":1,"explanation":"場所を表す be動詞過去。"},{"instruction":"正しい疑問文を選びなさい。","text":"Yumi was reading in the library.","choices":["Did Yumi reading in the library?","Was Yumi reading in the library?","Were Yumi reading in the library?","Was Yumi read in the library?"],"answer":1,"explanation":"過去進行形なので Was + 主語 + ing。"},{"instruction":"正しい英文を選びなさい。","text":"「彼らはそのとき忙しかった。」","choices":["They were busy then.","They were being busy then.","They did busy then.","They was busy then."],"answer":0,"explanation":"状態は were busy。"}]},{"name":"be動詞過去・過去進行形2","questions":[{"instruction":"正しい英文を選びなさい。","text":"「トムはそのとき家にいました。」","choices":["Tom was at home then.","Tom was being at home then.","Tom did at home then.","Tom were at home then."],"answer":0,"explanation":"場所は was at home。"},{"instruction":"正しい英文を選びなさい。","text":"「トムはそのとき宿題をしていました。」","choices":["Tom did his homework then.","Tom was doing his homework then.","Tom were doing his homework then.","Tom was do his homework then."],"answer":1,"explanation":"was doing。"},{"instruction":"適切な形を選びなさい。","text":"What ___ you doing then?","choices":["was","were","did","are"],"answer":1,"explanation":"you の過去進行形は were。"},{"instruction":"適切な答えを選びなさい。","text":"What were you doing then?","choices":["I was studying English.","Yes, I was.","I am studying English.","I studied every day."],"answer":0,"explanation":"その時していた内容を過去進行形で答えます。"},{"instruction":"正しい否定文を選びなさい。","text":"They were swimming.","choices":["They weren't swimming.","They didn't swimming.","They wasn't swimming.","They weren't swim."],"answer":0,"explanation":"weren't + swimming。"},{"instruction":"正しい組み合わせを選びなさい。","text":"Now she ___ tennis. / Then she ___ tennis.","choices":["is playing / was playing","was playing / is playing","plays / played every day","is play / was play"],"answer":0,"explanation":"now→現在進行形、then→過去進行形。"}]}]}
+};
+function q(instruction,text,choices,answer,explanation){
+  return {instruction,text,choices,answer,explanation};
+}
+
+const menu=document.getElementById("menu"), quiz=document.getElementById("quiz"), result=document.getElementById("result");
+const setSel=document.getElementById("set"), unitSel=document.getElementById("unit");
+let currentSet=null, index=0, correct=0, mistakes=[], answered=false;
+
+function fillSets(){
+  setSel.innerHTML="";
+  DATA[unitSel.value].sets.forEach((s,i)=>{
+    const o=document.createElement("option"); o.value=i; o.textContent=`${s.name}（${s.questions.length}問）`; setSel.appendChild(o);
+  });
+}
+fillSets();
+unitSel.addEventListener("change",fillSets);
+
+document.getElementById("start").onclick=()=>{
+  currentSet=DATA[unitSel.value].sets[Number(setSel.value)];
+  index=0; correct=0; mistakes=[];
+  menu.classList.add("hidden"); result.classList.add("hidden"); quiz.classList.remove("hidden");
+  render();
+};
+
+function render(){
+  answered=false;
+  const item=currentSet.questions[index];
+  document.getElementById("setName").textContent=currentSet.name;
+  document.getElementById("counter").textContent=`${index+1} / ${currentSet.questions.length}`;
+  document.getElementById("bar").style.width=`${(index/currentSet.questions.length)*100}%`;
+  document.getElementById("instruction").textContent=item.instruction;
+  document.getElementById("question").textContent=item.text;
+  const choices=document.getElementById("choices"); choices.innerHTML="";
+  item.choices.forEach((c,i)=>{
+    const b=document.createElement("button"); b.className="choice"; b.textContent=`${i+1}. ${c}`;
+    b.onclick=()=>answer(i,b); choices.appendChild(b);
+  });
+  document.getElementById("feedback").className="feedback hidden";
+  document.getElementById("next").classList.add("hidden");
+}
+
+function answer(choice,button){
+  if(answered) return; answered=true;
+  const item=currentSet.questions[index];
+  const buttons=[...document.querySelectorAll(".choice")];
+  buttons.forEach(b=>b.disabled=true);
+  buttons[item.answer].classList.add("correct");
+  const fb=document.getElementById("feedback");
+  if(choice===item.answer){
+    correct++; fb.className="feedback ok";
+    fb.innerHTML=`<strong>○ 正解！</strong><br>${item.explanation}`;
+  } else {
+    button.classList.add("wrong"); fb.className="feedback ng";
+    fb.innerHTML=`<strong>× 不正解</strong><br>正解：${item.choices[item.answer]}<br>${item.explanation}`;
+    mistakes.push({question:item.text, yours:item.choices[choice], correct:item.choices[item.answer]});
+  }
+  fb.classList.remove("hidden");
+  const next=document.getElementById("next"); next.classList.remove("hidden");
+  next.textContent=index===currentSet.questions.length-1 ? "結果を見る" : "次の問題";
+  document.getElementById("bar").style.width=`${((index+1)/currentSet.questions.length)*100}%`;
+}
+
+document.getElementById("next").onclick=()=>{
+  index++;
+  if(index<currentSet.questions.length) render(); else showResult();
+};
+
+function showResult(){
+  quiz.classList.add("hidden"); result.classList.remove("hidden");
+  const total=currentSet.questions.length, pct=Math.round(correct/total*100);
+  document.getElementById("score").textContent=`${correct} / ${total}`;
+  document.getElementById("resultMsg").textContent=
+    pct===100?"全問正解！":pct>=80?"よくできました！":pct>=60?"あと少し！間違えた問題を復習しましょう。":"もう一度挑戦してみましょう。";
+  const box=document.getElementById("mistakes");
+  if(!mistakes.length){ box.innerHTML="<strong>間違えた問題はありません。</strong>"; }
+  else {
+    box.innerHTML="<strong>間違えた問題</strong>";
+    mistakes.forEach((m,i)=>{
+      box.innerHTML+=`<div class="mistake">${i+1}. ${esc(m.question)}<br>あなた：${esc(m.yours)}<br><strong>正解：${esc(m.correct)}</strong></div>`;
+    });
+  }
+}
+function esc(s){return s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));}
+
+document.getElementById("retry").onclick=()=>{
+  index=0; correct=0; mistakes=[]; result.classList.add("hidden"); quiz.classList.remove("hidden"); render();
+};
+document.getElementById("back").onclick=()=>{
+  result.classList.add("hidden"); quiz.classList.add("hidden"); menu.classList.remove("hidden");
+};
+</script>
+</body>
+</html>
